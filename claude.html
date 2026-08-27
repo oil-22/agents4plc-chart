@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code 框架 · GY easy 评测</title>
+<style>
+:root { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+.viz-root {
+  --surface-1: #fcfcfb;
+  --page:      #f9f9f7;
+  --ink-1:     #0b0b0b;
+  --ink-2:     #52514e;
+  --muted:     #898781;
+  --grid:      #e1e0d9;
+  --axis:      #c3c2b7;
+  --border:    rgba(11,11,11,.10);
+  --focus:     rgba(42,120,214,.35);
+  --series-1: #2a78d6;
+  --series-3: #1baf7a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    --surface-1: #1a1a19;
+    --page:      #0d0d0d;
+    --ink-1:     #ffffff;
+    --ink-2:     #c3c2b7;
+    --muted:     #898781;
+    --grid:      #2c2c2a;
+    --axis:      #383835;
+    --border:    rgba(255,255,255,.10);
+    --focus:     rgba(57,135,229,.45);
+    --series-1: #3987e5;
+    --series-3: #199e70;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  --surface-1: #1a1a19;
+  --page:      #0d0d0d;
+  --ink-1:     #ffffff;
+  --ink-2:     #c3c2b7;
+  --muted:     #898781;
+  --grid:      #2c2c2a;
+  --axis:      #383835;
+  --border:    rgba(255,255,255,.10);
+  --focus:     rgba(57,135,229,.45);
+  --series-1: #3987e5;
+  --series-3: #199e70;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--page);
+  color: var(--ink-1);
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main.card {
+  max-width: 1100px;
+  margin: 28px auto;
+  padding: 28px 32px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+header.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+h1 { font-size: 19px; font-weight: 650; margin: 0 0 6px; }
+p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.6; }
+.head-ctrls { display: flex; gap: 8px; flex: none; }
+.icon-btn {
+  font: inherit; font-size: 12px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+  padding: 5px 10px; cursor: pointer;
+}
+.icon-btn:hover { background: var(--grid); }
+.icon-btn[aria-pressed="true"] { color: var(--ink-1); border-color: var(--ink-2); }
+
+.ctx { font-size: 13px; color: var(--ink-2); margin: 16px 0 10px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 6px 4px; }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.legend-item .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--c); }
+
+.chart-box { position: relative; }
+.chart-box svg { display: block; width: 100%; height: 460px; }
+.bar { transition: filter .12s ease; }
+.bar-group:hover .bar, .bar-group:focus .bar, .bar-group:focus-visible .bar { filter: brightness(1.14); }
+.bar-group { outline: none; }
+.bar-group:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.bar.s1 { fill: var(--fill-1, var(--series-1)); }
+.bar.s3 { fill: var(--fill-3, var(--series-3)); }
+html.tex { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+@media print {
+  html { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+  .head-ctrls, .foot { display: none; }
+  body { background: #fff; }
+  main.card { border: none; margin: 0; }
+}
+@media (forced-colors: active) {
+  html { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar { transition: none; }
+}
+
+.tip {
+  position: absolute; z-index: 10; pointer-events: none;
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 11px; font-size: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.14); max-width: 280px;
+}
+.tip-head { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.tip-row { display: flex; align-items: baseline; gap: 8px; }
+.tip-key { width: 12px; height: 2.5px; border-radius: 2px; background: var(--c); align-self: center; flex: none; }
+.tip-val { font-weight: 650; color: var(--ink-1); }
+.tip-name { color: var(--ink-2); }
+.tip-extra { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
+
+.table-wrap { margin-top: 20px; }
+h2.table-caption { font-size: 13.5px; font-weight: 650; margin: 0 0 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th { font-weight: 600; color: var(--ink-2); }
+th:first-child, td:first-child { text-align: left; color: var(--ink-2); }
+td.hl { font-weight: 650; }
+
+footer.foot { margin-top: 20px; font-size: 11.5px; color: var(--muted); line-height: 1.8; }
+footer.foot p { margin: 3px 0; }
+</style>
+</head>
+<body class="viz-root">
+<main class="card">
+  <header class="head">
+    <div class="head-txt">
+      <h1>Claude Code 框架 · GY easy 评测</h1>
+      <p class="sub">框架：Claude Code CLI（agent 循环）· 模型：deepseek-v4-flash<br>任务池：GY（Y-Hard）easy · 评测方式：外部评测（iec2c 编译 + softplc 测试）</p>
+    </div>
+    <div class="head-ctrls">
+      <button id="btnTex" class="icon-btn" aria-pressed="false" title="以 45° 纹理区分柱形（色弱识别 / 打印友好）">纹理</button>
+      <button id="btnTheme" class="icon-btn" aria-pressed="false" title="切换明暗主题">深色</button>
+    </div>
+  </header>
+
+  <div class="ctx" id="ctxLine">通过率（%）· 简单提示词 vs 详细脚手架</div>
+  <div class="legend" id="legend"></div>
+
+  <div class="chart-box" id="chartBox">
+    <svg id="chart" role="img" aria-label="Claude Code 框架 GY easy 通过率柱状图"></svg>
+    <div id="tip" class="tip" hidden></div>
+  </div>
+
+  <div class="table-wrap">
+    <h2 class="table-caption">运行统计（按会话去重）</h2>
+    <table>
+      <thead>
+        <tr><th>指标</th><th>简单提示词</th><th>详细脚手架</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>任务数（外部评测）</td><td>204</td><td>203</td></tr>
+        <tr><td>编译通过</td><td>192（94.1%）</td><td>186（91.6%）</td></tr>
+        <tr class="hl"><td>测试通过</td><td>180（88.2%）</td><td>180（88.7%）</td></tr>
+        <tr><td>平均轮次</td><td>39.0</td><td>36.6</td></tr>
+        <tr><td>平均输入 Token</td><td>504K</td><td>438K</td></tr>
+        <tr><td>平均耗时</td><td>4.0 分钟</td><td>3.4 分钟</td></tr>
+        <tr><td>平均成本</td><td>$3.39</td><td>$2.95</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="foot">
+    <p>数据口径：任务数与通过率为最终外部评测统计（final_20260729_1020 / full_backup 的 reevaluation_v2 结果）；消耗类指标为全部运行记录按 session 去重后的平均值，含不同阶段批次（2026-07-28 至 07-29）。</p>
+    <p>覆盖范围：仅 GY easy 池。medium 池 150 个任务全部因 API 错误未完成（0 有效结果）；hard 池未运行；Siemens / OSCAT 未覆盖。</p>
+    <p>同一任务在两种提示词模式下各跑一遍；两种模式的任务集合略有差异（204 / 203）。</p>
+  </footer>
+</main>
+
+<script>
+/* 数据：Claude Code + deepseek-v4-flash 在 GY easy 上的外部评测结果 */
+const DATA = {
+  groups: [
+    { name: '简单提示词', taskTotal: 204,
+      compiled: 192, testedPass: 180 },
+    { name: '详细脚手架', taskTotal: 203,
+      compiled: 186, testedPass: 180 },
+  ],
+  series: [
+    { key: 'testedPass', name: '测试通过率', slot: 1 },
+    { key: 'compiled', name: '编译通过率', slot: 3 },
+  ],
+};
+
+const svg = document.getElementById('chart');
+const tip = document.getElementById('tip');
+const M = { l: 60, r: 20, t: 36, b: 52 };
+
+function pct(g, key) {
+  return g[key] / g.taskTotal * 100;
+}
+
+function render() {
+  const W = svg.clientWidth || 1000, H = 460;
+  const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
+  const min = -10, max = 100, span = max - min;
+  const ty = t => M.t + plotH * (1 - (t - min) / span);
+
+  svg.innerHTML = '';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  for (const i of [1, 3]) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    p.setAttribute('id', 'tex-' + i);
+    p.setAttribute('width', '4'); p.setAttribute('height', '4');
+    p.setAttribute('patternUnits', 'userSpaceOnUse');
+    p.setAttribute('patternTransform', 'rotate(45)');
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', '0'); ln.setAttribute('y1', '0'); ln.setAttribute('x2', '0'); ln.setAttribute('y2', '4');
+    ln.setAttribute('stroke', 'rgba(0,0,0,.35)');
+    ln.setAttribute('style', 'stroke: color-mix(in srgb, var(--series-' + i + ') 65%, #000 35%)');
+    ln.setAttribute('stroke-width', '1.2');
+    p.appendChild(ln);
+    defs.appendChild(p);
+  }
+  svg.appendChild(defs);
+
+  // 网格与轴线
+  const gridG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  for (let t = 0; t <= max; t += 20) {
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
+    ln.setAttribute('y1', ty(t)); ln.setAttribute('y2', ty(t));
+    ln.setAttribute('stroke', 'var(--grid)'); ln.setAttribute('stroke-width', '1');
+    gridG.appendChild(ln);
+  }
+  for (const t of [0, min]) {
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
+    ln.setAttribute('y1', ty(t)); ln.setAttribute('y2', ty(t));
+    ln.setAttribute('stroke', 'var(--axis)'); ln.setAttribute('stroke-width', '1');
+    gridG.appendChild(ln);
+  }
+  svg.appendChild(gridG);
+
+  // Y 轴刻度
+  const ticks = [-10, 0, 20, 40, 60, 80, 100];
+  for (const t of ticks) {
+    const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    tx.setAttribute('x', M.l - 10); tx.setAttribute('y', ty(t) + 4);
+    tx.setAttribute('text-anchor', 'end');
+    tx.setAttribute('fill', 'var(--muted)'); tx.setAttribute('font-size', '12');
+    tx.setAttribute('style', 'font-variant-numeric: tabular-nums');
+    tx.textContent = String(t);
+    svg.appendChild(tx);
+  }
+
+  // 柱体
+  const n = DATA.groups.length;
+  const gap = Math.min(90, plotW * 0.08);
+  const groupW = (plotW - gap * (n - 1)) / n;
+  const slot = groupW / DATA.series.length;
+  const barW = Math.max(2, Math.min(24, slot - 4));
+
+  DATA.groups.forEach((g, gi) => {
+    const gx = M.l + gi * (groupW + gap);
+    DATA.series.forEach((s, si) => {
+      const v = pct(g, s.key);
+      const bx = gx + si * slot + (slot - barW) / 2;
+      const topY = M.t + plotH * (1 - (v - min) / span);
+      const h = ty(min) - topY;
+
+      const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      grp.setAttribute('class', 'bar-group');
+      grp.setAttribute('role', 'img');
+      grp.setAttribute('tabindex', '0');
+      grp.setAttribute('aria-label', g.name + ' · ' + s.name + ' ' + v.toFixed(1) + '%');
+
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hit.setAttribute('x', bx - (slot - barW) / 2);
+      hit.setAttribute('width', slot);
+      hit.setAttribute('y', M.t - 8); hit.setAttribute('height', plotH + 8);
+      hit.setAttribute('fill', 'transparent');
+      grp.appendChild(hit);
+
+      const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      bar.setAttribute('class', 'bar s' + s.slot);
+      const rr = Math.min(4, h / 2, barW / 2);
+      bar.setAttribute('d', rr < 0.5
+        ? 'M' + bx + ',' + (topY + h) + ' h' + barW + ' V' + topY + ' h' + (-barW) + ' Z'
+        : 'M' + bx + ',' + (topY + h) +
+          ' V' + (topY + rr) +
+          ' Q' + bx + ',' + topY + ' ' + (bx + rr) + ',' + topY +
+          ' H' + (bx + barW - rr) +
+          ' Q' + (bx + barW) + ',' + topY + ' ' + (bx + barW) + ',' + (topY + rr) +
+          ' V' + (topY + h) + ' Z');
+      grp.appendChild(bar);
+
+      grp.addEventListener('pointerenter', e => showTip(g, s, v, e));
+      grp.addEventListener('pointermove', moveTip);
+      grp.addEventListener('pointerleave', hideTip);
+      grp.addEventListener('focus', e => showTip(g, s, v, e, true));
+      grp.addEventListener('blur', hideTip);
+      grp.addEventListener('keydown', e => { if (e.key === 'Escape') { hideTip(); grp.blur(); } });
+      svg.appendChild(grp);
+
+      // 柱顶直接标注（横向）
+      const lb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      lb.setAttribute('x', bx + barW / 2); lb.setAttribute('y', topY - 4);
+      lb.setAttribute('text-anchor', 'middle');
+      lb.setAttribute('fill', 'var(--ink-2)'); lb.setAttribute('font-size', '10');
+      lb.textContent = v.toFixed(1) + '%';
+      svg.appendChild(lb);
+    });
+
+    // X 轴标签
+    const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    tx.setAttribute('x', gx + groupW / 2); tx.setAttribute('y', H - 22);
+    tx.setAttribute('text-anchor', 'middle');
+    tx.setAttribute('fill', 'var(--muted)'); tx.setAttribute('font-size', '12.5');
+    tx.textContent = g.name;
+    svg.appendChild(tx);
+  });
+}
+
+/* 图例 */
+function renderLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  for (const s of DATA.series) {
+    const it = document.createElement('span');
+    it.className = 'legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'sw';
+    sw.style.setProperty('--c', 'var(--series-' + s.slot + ')');
+    const nm = document.createElement('span');
+    nm.textContent = s.name;
+    it.appendChild(sw); it.appendChild(nm);
+    el.appendChild(it);
+  }
+}
+
+/* 工具提示 */
+function showTip(g, s, v, e, viaFocus) {
+  tip.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'tip-head';
+  head.textContent = g.name + ' · 任务数 ' + g.taskTotal;
+  const row = document.createElement('div');
+  row.className = 'tip-row';
+  const key = document.createElement('span');
+  key.className = 'tip-key';
+  key.style.setProperty('--c', 'var(--series-' + s.slot + ')');
+  const val = document.createElement('span');
+  val.className = 'tip-val';
+  val.textContent = v.toFixed(1) + '%';
+  const name = document.createElement('span');
+  name.className = 'tip-name';
+  name.textContent = s.name;
+  row.appendChild(key); row.appendChild(val); row.appendChild(name);
+  const extra = document.createElement('div');
+  extra.className = 'tip-extra';
+  extra.textContent = s.key === 'testedPass'
+    ? '编译通过 ' + (g.compiled - g.testedPass) + ' 个任务未过测试'
+    : '编译失败 ' + (g.taskTotal - g.compiled) + ' 个任务';
+  tip.appendChild(head); tip.appendChild(row); tip.appendChild(extra);
+  tip.hidden = false;
+  if (viaFocus) {
+    const box = document.getElementById('chartBox').getBoundingClientRect();
+    const r = e.target.getBoundingClientRect();
+    tip.style.left = Math.min(Math.max(8, r.left - box.left + r.width / 2 - 90), box.width - 200) + 'px';
+    tip.style.top = Math.max(8, r.top - box.top - 60) + 'px';
+  } else {
+    moveTip(e);
+  }
+}
+function moveTip(e) {
+  const box = document.getElementById('chartBox').getBoundingClientRect();
+  let left = e.clientX - box.left + 14, top = e.clientY - box.top + 14;
+  if (left + tip.offsetWidth > box.width - 8) left = e.clientX - box.left - tip.offsetWidth - 14;
+  if (top + tip.offsetHeight > box.height - 8) top = e.clientY - box.top - tip.offsetHeight - 14;
+  tip.style.left = Math.max(8, left) + 'px';
+  tip.style.top = Math.max(8, top) + 'px';
+}
+function hideTip() { tip.hidden = true; }
+
+/* 主题与纹理 */
+const btnTheme = document.getElementById('btnTheme');
+function applyTheme(t) {
+  if (t === 'dark') { document.documentElement.dataset.theme = 'dark'; btnTheme.textContent = '浅色'; btnTheme.setAttribute('aria-pressed', 'true'); }
+  else { document.documentElement.dataset.theme = 'light'; btnTheme.textContent = '深色'; btnTheme.setAttribute('aria-pressed', 'false'); }
+}
+btnTheme.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('plc-theme', next); } catch (e) {}
+  applyTheme(next);
+});
+const btnTex = document.getElementById('btnTex');
+function applyTex(on) { document.documentElement.classList.toggle('tex', on); btnTex.setAttribute('aria-pressed', String(on)); }
+btnTex.addEventListener('click', () => {
+  const on = !document.documentElement.classList.contains('tex');
+  try { localStorage.setItem('plc-tex', on ? '1' : '0'); } catch (e) {}
+  applyTex(on);
+});
+
+let resizeTimer = null;
+new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); }).observe(svg);
+
+try {
+  const t = localStorage.getItem('plc-theme');
+  if (t) applyTheme(t);
+  const x = localStorage.getItem('plc-tex');
+  if (x === '1') applyTex(true);
+} catch (e) {}
+
+renderLegend();
+render();
+</script>
+</body>
+</html>
