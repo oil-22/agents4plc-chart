@@ -19,7 +19,6 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border:    rgba(11,11,11,.10);
   --focus:     rgba(42,120,214,.35);
   --series-1: #2a78d6;
-  --series-3: #1baf7a;
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) .viz-root {
@@ -33,7 +32,6 @@ html[data-theme="dark"] { color-scheme: dark; }
     --border:    rgba(255,255,255,.10);
     --focus:     rgba(57,135,229,.45);
     --series-1: #3987e5;
-    --series-3: #199e70;
   }
 }
 :root[data-theme="dark"] .viz-root {
@@ -47,7 +45,6 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border:    rgba(255,255,255,.10);
   --focus:     rgba(57,135,229,.45);
   --series-1: #3987e5;
-  --series-3: #199e70;
 }
 
 * { box-sizing: border-box; }
@@ -94,28 +91,24 @@ p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; }
 #btnTable { margin-left: auto; }
 
 .ctx { font-size: 13px; color: var(--ink-2); margin: 14px 0 10px; font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 6px 4px; }
-.legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
-.legend-item .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--c); }
 
 .chart-box { position: relative; }
 .chart-box svg { display: block; width: 100%; height: 560px; }
-.bar { transition: filter .12s ease; }
+.bar { transition: filter .12s ease, y .18s ease, height .18s ease; }
 .bar-group:hover .bar, .bar-group:focus .bar, .bar-group:focus-visible .bar { filter: brightness(1.14); }
 .bar-group { outline: none; }
 .bar-group:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 
 .bar.s1 { fill: var(--fill-1, var(--series-1)); }
-.bar.s3 { fill: var(--fill-3, var(--series-3)); }
-html.tex { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+html.tex { --fill-1: url(#tex-1); }
 @media print {
-  html { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+  html { --fill-1: url(#tex-1); }
   .filters, .head-ctrls, .foot { display: none; }
   body { background: #fff; }
   main.card { border: none; margin: 0; }
 }
 @media (forced-colors: active) {
-  html { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
+  html { --fill-1: url(#tex-1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar { transition: none; }
@@ -129,10 +122,8 @@ html.tex { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
 }
 .tip-head { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .tip-row { display: flex; align-items: baseline; gap: 8px; }
-.tip-key { width: 12px; height: 2.5px; border-radius: 2px; background: var(--c); align-self: center; flex: none; }
 .tip-val { font-weight: 650; color: var(--ink-1); }
 .tip-name { color: var(--ink-2); }
-.tip-extra { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
 
 .table-wrap { margin-top: 18px; }
 h2.table-caption { font-size: 13.5px; font-weight: 650; margin: 0 0 10px; }
@@ -152,7 +143,7 @@ footer.foot p { margin: 2px 0; }
   <header class="head">
     <div class="head-txt">
       <h1>Claude Code 框架评测</h1>
-      <p class="sub">Claude Code + deepseek-v4-flash · 编译通过率 · 测试通过率</p>
+      <p class="sub">Claude Code + deepseek-v4-flash · 测试通过率 · 编译通过率 · 平均 Token 消耗 · 平均时间消耗</p>
     </div>
     <div class="head-ctrls">
       <a class="icon-btn" style="text-decoration:none;display:inline-flex;align-items:center" href="./index.html">← 完整对比</a>
@@ -164,16 +155,18 @@ footer.foot p { margin: 2px 0; }
   <div class="filters">
     <div class="f-group">
       <span class="f-label">指标</span>
-      <button class="tab active">通过率</button>
+      <button class="tab active" data-metric="rate">测试通过率</button>
+      <button class="tab" data-metric="compile">编译通过率</button>
+      <button class="tab" data-metric="token">平均 Token 消耗</button>
+      <button class="tab" data-metric="time">平均时间消耗</button>
     </div>
     <button id="btnTable" class="tab" aria-pressed="false">显示数据表</button>
   </div>
 
-  <div class="ctx" id="ctxLine">通过率（%）· 简单提示词 vs 详细脚手架</div>
-  <div class="legend" id="legend"></div>
+  <div class="ctx" id="ctxLine"></div>
 
   <div class="chart-box" id="chartBox">
-    <svg id="chart" role="img" aria-label="Claude Code 框架通过率柱状图"></svg>
+    <svg id="chart" role="img"></svg>
     <div id="tip" class="tip" hidden></div>
   </div>
 
@@ -203,65 +196,83 @@ footer.foot p { margin: 2px 0; }
 </main>
 
 <script>
-const DATA = {
-  groups: [
-    { name: '简单提示词', taskTotal: 204, compiled: 192, testedPass: 180 },
-    { name: '详细脚手架', taskTotal: 203, compiled: 186, testedPass: 180 },
-  ],
-  series: [
-    { key: 'testedPass', name: '测试通过率', slot: 1 },
-    { key: 'compiled', name: '编译通过率', slot: 3 },
-  ],
-};
+/* 数据：Claude Code + deepseek-v4-flash，两组提示词模式 */
+const GROUPS = [
+  { name: '简单提示词', taskTotal: 204, rate: 88.2, compile: 94.1, token: 504, time: 240 },
+  { name: '详细脚手架', taskTotal: 203, rate: 88.7, compile: 91.6, token: 438, time: 204 },
+];
+const METRICS = { rate: '测试通过率', compile: '编译通过率', token: '平均 Token 消耗', time: '平均时间消耗' };
+const UNITS = { rate: '%', compile: '%', token: 'K', time: '秒' };
 
+const state = { metric: 'rate' };
 const svg = document.getElementById('chart');
 const tip = document.getElementById('tip');
 const M = { l: 60, r: 20, t: 36, b: 52 };
 
-function pct(g, key) { return g[key] / g.taskTotal * 100; }
+function domain() {
+  const m = state.metric;
+  if (m === 'rate' || m === 'compile') return { min: -10, max: 100, step: 20 };
+  if (m === 'token') return { min: 0, max: 600, step: 100 };
+  return { min: 0, max: 300, step: 50 };
+}
+function fmtVal(v) {
+  const m = state.metric;
+  if (m === 'rate' || m === 'compile') return v.toFixed(1) + '%';
+  if (m === 'token') return Math.round(v) + 'K';
+  return Math.round(v) + ' 秒';
+}
+function fmtLabel(v) {
+  const m = state.metric;
+  if (m === 'rate' || m === 'compile') return v.toFixed(1) + '%';
+  if (m === 'token') return Math.round(v) + 'K';
+  return String(Math.round(v));
+}
 
 function render() {
   const W = svg.clientWidth || 1100, H = 560;
   const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
-  const min = -10, max = 100, span = max - min;
-  const ty = t => M.t + plotH * (1 - (t - min) / span);
+  const dom = domain();
+  const span = dom.max - dom.min;
+  const ty = t => M.t + plotH * (1 - (t - dom.min) / span);
+  const y = v => M.t + plotH * (1 - (v - dom.min) / span);
 
   svg.innerHTML = '';
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  for (const i of [1, 3]) {
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-    p.setAttribute('id', 'tex-' + i);
-    p.setAttribute('width', '4'); p.setAttribute('height', '4');
-    p.setAttribute('patternUnits', 'userSpaceOnUse');
-    p.setAttribute('patternTransform', 'rotate(45)');
-    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    ln.setAttribute('x1', '0'); ln.setAttribute('y1', '0'); ln.setAttribute('x2', '0'); ln.setAttribute('y2', '4');
-    ln.setAttribute('stroke', 'rgba(0,0,0,.35)');
-    ln.setAttribute('style', 'stroke: color-mix(in srgb, var(--series-' + i + ') 65%, #000 35%)');
-    ln.setAttribute('stroke-width', '1.2');
-    p.appendChild(ln);
-    defs.appendChild(p);
-  }
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+  p.setAttribute('id', 'tex-1');
+  p.setAttribute('width', '4'); p.setAttribute('height', '4');
+  p.setAttribute('patternUnits', 'userSpaceOnUse');
+  p.setAttribute('patternTransform', 'rotate(45)');
+  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  ln.setAttribute('x1', '0'); ln.setAttribute('y1', '0'); ln.setAttribute('x2', '0'); ln.setAttribute('y2', '4');
+  ln.setAttribute('stroke', 'rgba(0,0,0,.35)');
+  ln.setAttribute('style', 'stroke: color-mix(in srgb, var(--series-1) 65%, #000 35%)');
+  ln.setAttribute('stroke-width', '1.2');
+  p.appendChild(ln);
+  defs.appendChild(p);
   svg.appendChild(defs);
 
   const gridG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  for (let t = 0; t <= max; t += 20) {
-    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
-    ln.setAttribute('y1', ty(t)); ln.setAttribute('y2', ty(t));
-    ln.setAttribute('stroke', 'var(--grid)'); ln.setAttribute('stroke-width', '1');
-    gridG.appendChild(ln);
+  for (let t = 0; t <= dom.max; t += dom.step) {
+    const gl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    gl.setAttribute('x1', M.l); gl.setAttribute('x2', W - M.r);
+    gl.setAttribute('y1', ty(t)); gl.setAttribute('y2', ty(t));
+    gl.setAttribute('stroke', 'var(--grid)'); gl.setAttribute('stroke-width', '1');
+    gridG.appendChild(gl);
   }
-  for (const t of [0, min]) {
-    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
-    ln.setAttribute('y1', ty(t)); ln.setAttribute('y2', ty(t));
-    ln.setAttribute('stroke', 'var(--axis)'); ln.setAttribute('stroke-width', '1');
-    gridG.appendChild(ln);
+  for (const t of [0, dom.min]) {
+    const gl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    gl.setAttribute('x1', M.l); gl.setAttribute('x2', W - M.r);
+    gl.setAttribute('y1', ty(t)); gl.setAttribute('y2', ty(t));
+    gl.setAttribute('stroke', 'var(--axis)'); gl.setAttribute('stroke-width', '1');
+    gridG.appendChild(gl);
   }
   svg.appendChild(gridG);
 
-  for (const t of [-10, 0, 20, 40, 60, 80, 100]) {
+  const tickVals = [];
+  if (dom.min < 0) tickVals.push(dom.min);
+  for (let t = 0; t <= dom.max; t += dom.step) tickVals.push(t);
+  for (const t of tickVals) {
     const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     tx.setAttribute('x', M.l - 10); tx.setAttribute('y', ty(t) + 4);
     tx.setAttribute('text-anchor', 'end');
@@ -271,61 +282,57 @@ function render() {
     svg.appendChild(tx);
   }
 
-  const n = DATA.groups.length;
+  const n = GROUPS.length;
   const gap = Math.min(90, plotW * 0.08);
   const groupW = (plotW - gap * (n - 1)) / n;
-  const slot = groupW / DATA.series.length;
-  const barW = Math.max(2, Math.min(24, slot - 4));
+  const barW = Math.max(2, Math.min(24, groupW * 0.3));
 
-  DATA.groups.forEach((g, gi) => {
+  GROUPS.forEach((g, gi) => {
+    const v = g[state.metric];
     const gx = M.l + gi * (groupW + gap);
-    DATA.series.forEach((s, si) => {
-      const v = pct(g, s.key);
-      const bx = gx + si * slot + (slot - barW) / 2;
-      const topY = M.t + plotH * (1 - (v - min) / span);
-      const h = ty(min) - topY;
+    const bx = gx + (groupW - barW) / 2;
+    const topY = y(v);
+    const h = ty(dom.min) - topY;
 
-      const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      grp.setAttribute('class', 'bar-group');
-      grp.setAttribute('role', 'img');
-      grp.setAttribute('tabindex', '0');
-      grp.setAttribute('aria-label', g.name + ' · ' + s.name + ' ' + v.toFixed(1) + '%');
+    const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    grp.setAttribute('class', 'bar-group');
+    grp.setAttribute('role', 'img');
+    grp.setAttribute('tabindex', '0');
+    grp.setAttribute('aria-label', g.name + ' · ' + METRICS[state.metric] + ' ' + fmtVal(v));
 
-      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      hit.setAttribute('x', bx - (slot - barW) / 2);
-      hit.setAttribute('width', slot);
-      hit.setAttribute('y', M.t - 8); hit.setAttribute('height', plotH + 8);
-      hit.setAttribute('fill', 'transparent');
-      grp.appendChild(hit);
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    hit.setAttribute('x', gx); hit.setAttribute('width', groupW);
+    hit.setAttribute('y', M.t - 8); hit.setAttribute('height', plotH + 8);
+    hit.setAttribute('fill', 'transparent');
+    grp.appendChild(hit);
 
-      const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      bar.setAttribute('class', 'bar s' + s.slot);
-      const rr = Math.min(4, h / 2, barW / 2);
-      bar.setAttribute('d', rr < 0.5
-        ? 'M' + bx + ',' + (topY + h) + ' h' + barW + ' V' + topY + ' h' + (-barW) + ' Z'
-        : 'M' + bx + ',' + (topY + h) +
-          ' V' + (topY + rr) +
-          ' Q' + bx + ',' + topY + ' ' + (bx + rr) + ',' + topY +
-          ' H' + (bx + barW - rr) +
-          ' Q' + (bx + barW) + ',' + topY + ' ' + (bx + barW) + ',' + (topY + rr) +
-          ' V' + (topY + h) + ' Z');
-      grp.appendChild(bar);
+    const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bar.setAttribute('class', 'bar s1');
+    const rr = Math.min(4, h / 2, barW / 2);
+    bar.setAttribute('d', rr < 0.5
+      ? 'M' + bx + ',' + (topY + h) + ' h' + barW + ' V' + topY + ' h' + (-barW) + ' Z'
+      : 'M' + bx + ',' + (topY + h) +
+        ' V' + (topY + rr) +
+        ' Q' + bx + ',' + topY + ' ' + (bx + rr) + ',' + topY +
+        ' H' + (bx + barW - rr) +
+        ' Q' + (bx + barW) + ',' + topY + ' ' + (bx + barW) + ',' + (topY + rr) +
+        ' V' + (topY + h) + ' Z');
+    grp.appendChild(bar);
 
-      grp.addEventListener('pointerenter', e => showTip(g, s, v, e));
-      grp.addEventListener('pointermove', moveTip);
-      grp.addEventListener('pointerleave', hideTip);
-      grp.addEventListener('focus', e => showTip(g, s, v, e, true));
-      grp.addEventListener('blur', hideTip);
-      grp.addEventListener('keydown', e => { if (e.key === 'Escape') { hideTip(); grp.blur(); } });
-      svg.appendChild(grp);
+    grp.addEventListener('pointerenter', e => showTip(g, v, e));
+    grp.addEventListener('pointermove', moveTip);
+    grp.addEventListener('pointerleave', hideTip);
+    grp.addEventListener('focus', e => showTip(g, v, e, true));
+    grp.addEventListener('blur', hideTip);
+    grp.addEventListener('keydown', e => { if (e.key === 'Escape') { hideTip(); grp.blur(); } });
+    svg.appendChild(grp);
 
-      const lb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      lb.setAttribute('x', bx + barW / 2); lb.setAttribute('y', topY - 4);
-      lb.setAttribute('text-anchor', 'middle');
-      lb.setAttribute('fill', 'var(--ink-2)'); lb.setAttribute('font-size', '10');
-      lb.textContent = v.toFixed(1) + '%';
-      svg.appendChild(lb);
-    });
+    const lb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lb.setAttribute('x', bx + barW / 2); lb.setAttribute('y', topY - 4);
+    lb.setAttribute('text-anchor', 'middle');
+    lb.setAttribute('fill', 'var(--ink-2)'); lb.setAttribute('font-size', '10');
+    lb.textContent = fmtLabel(v);
+    svg.appendChild(lb);
 
     const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     tx.setAttribute('x', gx + groupW / 2); tx.setAttribute('y', H - 22);
@@ -334,47 +341,25 @@ function render() {
     tx.textContent = g.name;
     svg.appendChild(tx);
   });
+
+  svg.setAttribute('aria-label', METRICS[state.metric] + ' 柱状图');
 }
 
-function renderLegend() {
-  const el = document.getElementById('legend');
-  el.innerHTML = '';
-  for (const s of DATA.series) {
-    const it = document.createElement('span');
-    it.className = 'legend-item';
-    const sw = document.createElement('span');
-    sw.className = 'sw';
-    sw.style.setProperty('--c', 'var(--series-' + s.slot + ')');
-    const nm = document.createElement('span');
-    nm.textContent = s.name;
-    it.appendChild(sw); it.appendChild(nm);
-    el.appendChild(it);
-  }
-}
-
-function showTip(g, s, v, e, viaFocus) {
+function showTip(g, v, e, viaFocus) {
   tip.innerHTML = '';
   const head = document.createElement('div');
   head.className = 'tip-head';
   head.textContent = g.name + ' · 任务数 ' + g.taskTotal;
   const row = document.createElement('div');
   row.className = 'tip-row';
-  const key = document.createElement('span');
-  key.className = 'tip-key';
-  key.style.setProperty('--c', 'var(--series-' + s.slot + ')');
   const val = document.createElement('span');
   val.className = 'tip-val';
-  val.textContent = v.toFixed(1) + '%';
+  val.textContent = fmtVal(v);
   const name = document.createElement('span');
   name.className = 'tip-name';
-  name.textContent = s.name;
-  row.appendChild(key); row.appendChild(val); row.appendChild(name);
-  const extra = document.createElement('div');
-  extra.className = 'tip-extra';
-  extra.textContent = s.key === 'testedPass'
-    ? '编译通过 ' + (g.compiled - g.testedPass) + ' 个任务未过测试'
-    : '编译失败 ' + (g.taskTotal - g.compiled) + ' 个任务';
-  tip.appendChild(head); tip.appendChild(row); tip.appendChild(extra);
+  name.textContent = METRICS[state.metric];
+  row.appendChild(val); row.appendChild(name);
+  tip.appendChild(head); tip.appendChild(row);
   tip.hidden = false;
   if (viaFocus) {
     const box = document.getElementById('chartBox').getBoundingClientRect();
@@ -394,6 +379,19 @@ function moveTip(e) {
   tip.style.top = Math.max(8, top) + 'px';
 }
 function hideTip() { tip.hidden = true; }
+
+document.querySelectorAll('[data-metric]').forEach(b => {
+  b.addEventListener('click', () => {
+    state.metric = b.dataset.metric;
+    document.querySelectorAll('[data-metric]').forEach(x => x.classList.toggle('active', x === b));
+    refresh();
+  });
+});
+function refresh() {
+  document.getElementById('ctxLine').textContent =
+    METRICS[state.metric] + (UNITS[state.metric] === '%' ? '（%）' : '（单位：' + UNITS[state.metric] + '）');
+  render();
+}
 
 const btnTable = document.getElementById('btnTable');
 btnTable.addEventListener('click', () => {
@@ -432,8 +430,7 @@ try {
   if (x === '1') applyTex(true);
 } catch (e) {}
 
-renderLegend();
-render();
+refresh();
 </script>
 </body>
 </html>
