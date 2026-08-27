@@ -218,15 +218,18 @@ function domain() {
   if (m === 'token') return { min: 0, max: 600, step: 100 };
   return { min: 0, max: 300, step: 50 };
 }
+function fmtPct(v) {
+  return v >= 99.95 ? '100%' : v.toFixed(1) + '%';
+}
 function fmtVal(v) {
   const m = state.metric;
-  if (m === 'rate' || m === 'compile') return v.toFixed(1) + '%';
+  if (m === 'rate' || m === 'compile') return fmtPct(v);
   if (m === 'token') return Math.round(v) + 'K';
   return Math.round(v) + ' 秒';
 }
 function fmtLabel(v) {
   const m = state.metric;
-  if (m === 'rate' || m === 'compile') return v.toFixed(1) + '%';
+  if (m === 'rate' || m === 'compile') return fmtPct(v);
   if (m === 'token') return Math.round(v) + 'K';
   return String(Math.round(v));
 }
