@@ -19,6 +19,8 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border:    rgba(11,11,11,.10);
   --focus:     rgba(42,120,214,.35);
   --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) .viz-root {
@@ -32,6 +34,8 @@ html[data-theme="dark"] { color-scheme: dark; }
     --border:    rgba(255,255,255,.10);
     --focus:     rgba(57,135,229,.45);
     --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
   }
 }
 :root[data-theme="dark"] .viz-root {
@@ -45,6 +49,8 @@ html[data-theme="dark"] { color-scheme: dark; }
   --border:    rgba(255,255,255,.10);
   --focus:     rgba(57,135,229,.45);
   --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
 }
 
 * { box-sizing: border-box; }
@@ -91,6 +97,9 @@ p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; }
 #btnTable { margin-left: auto; }
 
 .ctx { font-size: 13px; color: var(--ink-2); margin: 14px 0 10px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 6px 4px; }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.legend-item .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--c); }
 
 .chart-box { position: relative; }
 .chart-box svg { display: block; width: 100%; height: 560px; }
@@ -100,15 +109,17 @@ p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; }
 .bar-group:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 
 .bar.s1 { fill: var(--fill-1, var(--series-1)); }
-html.tex { --fill-1: url(#tex-1); }
+.bar.s2 { fill: var(--fill-2, var(--series-2)); }
+.bar.s3 { fill: var(--fill-3, var(--series-3)); }
+html.tex { --fill-1: url(#tex-1); --fill-2: url(#tex-2); --fill-3: url(#tex-3); }
 @media print {
-  html { --fill-1: url(#tex-1); }
+  html { --fill-1: url(#tex-1); --fill-2: url(#tex-2); --fill-3: url(#tex-3); }
   .filters, .head-ctrls, .foot { display: none; }
   body { background: #fff; }
   main.card { border: none; margin: 0; }
 }
 @media (forced-colors: active) {
-  html { --fill-1: url(#tex-1); }
+  html { --fill-1: url(#tex-1); --fill-2: url(#tex-2); --fill-3: url(#tex-3); }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar { transition: none; }
@@ -164,6 +175,7 @@ footer.foot p { margin: 2px 0; }
   </div>
 
   <div class="ctx" id="ctxLine"></div>
+  <div class="legend" id="legend"></div>
 
   <div class="chart-box" id="chartBox">
     <svg id="chart" role="img"></svg>
@@ -174,7 +186,7 @@ footer.foot p { margin: 2px 0; }
     <h2 class="table-caption">运行统计（按会话去重）</h2>
     <table>
       <thead>
-        <tr><th>指标</th><th>Agents4PLC</th><th>简单提示词</th><th>详细脚手架</th></tr>
+        <tr><th>指标</th><th>Agents4PLC</th><th>Claude+简单脚手架</th><th>Claude+详细脚手架</th></tr>
       </thead>
       <tbody>
         <tr><td>任务数（外部评测）</td><td>314</td><td>204</td><td>203</td></tr>
@@ -188,21 +200,15 @@ footer.foot p { margin: 2px 0; }
     </table>
   </div>
 
-  <footer class="foot">
-    <p>数据口径：任务数与通过率为最终外部评测统计（iec2c 编译 + softplc 测试）；Claude 消耗类指标为全部运行记录按会话去重后的平均值（2026-07-28 至 07-29 各批次）；Agents4PLC 数据取自其 Y 评测记录（314 个任务全部通过，平均轮次 5.2、Token 45K、耗时 52 秒）。</p>
-    <p>任务集合：三组任务同源于 Y 数据集但为不同批次（314 / 204 / 203），数值为各自批次的统计。</p>
-    <p>Token 口径：Claude 为总量（输入 504K/438K + 输出 16~20K）；Agents4PLC 为运行记录总量。</p>
-    <p>覆盖范围：外部评测（iec2c 编译 + softplc 测试）仅覆盖图表所示 Claude 的 407 个任务；另有 medium 629 个、hard 627 个任务已运行并产出 solution.st（记录于 pool_checkpoint.json，2026-08-10 快照），其独立评测尚未执行，未计入本页；Siemens / OSCAT 未覆盖。</p>
-    <p>同一任务在两种提示词模式下各跑一遍；两种模式的任务集合略有差异（204 / 203）。</p>
-  </footer>
+  <footer class="foot" hidden></footer>
 </main>
 
 <script>
-/* 数据：Agents4PLC 与 Claude Code + deepseek-v4-flash 的两种提示词模式 */
+/* 数据：Agents4PLC 与 Claude Code + deepseek-v4-flash 的两种脚手架模式 */
 const GROUPS = [
-  { name: 'Agents4PLC', taskTotal: 314, rate: 100, compile: 100, token: 45, time: 52 },
-  { name: '简单提示词', taskTotal: 204, rate: 88.2, compile: 94.1, token: 524, time: 240 },
-  { name: '详细脚手架', taskTotal: 203, rate: 88.7, compile: 91.6, token: 454, time: 204 },
+  { name: 'Agents4PLC', slot: 1, taskTotal: 314, rate: 100, compile: 100, token: 45, time: 52 },
+  { name: 'Claude+简单脚手架', slot: 2, taskTotal: 204, rate: 88.2, compile: 94.1, token: 524, time: 240 },
+  { name: 'Claude+详细脚手架', slot: 3, taskTotal: 203, rate: 88.7, compile: 91.6, token: 454, time: 204 },
 ];
 const METRICS = { rate: '测试通过率', compile: '编译通过率', token: '平均 Token 消耗', time: '平均时间消耗' };
 const UNITS = { rate: '%', compile: '%', token: 'K', time: '秒' };
@@ -244,18 +250,20 @@ function render() {
 
   svg.innerHTML = '';
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-  p.setAttribute('id', 'tex-1');
-  p.setAttribute('width', '4'); p.setAttribute('height', '4');
-  p.setAttribute('patternUnits', 'userSpaceOnUse');
-  p.setAttribute('patternTransform', 'rotate(45)');
-  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  ln.setAttribute('x1', '0'); ln.setAttribute('y1', '0'); ln.setAttribute('x2', '0'); ln.setAttribute('y2', '4');
-  ln.setAttribute('stroke', 'rgba(0,0,0,.35)');
-  ln.setAttribute('style', 'stroke: color-mix(in srgb, var(--series-1) 65%, #000 35%)');
-  ln.setAttribute('stroke-width', '1.2');
-  p.appendChild(ln);
-  defs.appendChild(p);
+  for (const i of [1, 2, 3]) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    p.setAttribute('id', 'tex-' + i);
+    p.setAttribute('width', '4'); p.setAttribute('height', '4');
+    p.setAttribute('patternUnits', 'userSpaceOnUse');
+    p.setAttribute('patternTransform', 'rotate(45)');
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', '0'); ln.setAttribute('y1', '0'); ln.setAttribute('x2', '0'); ln.setAttribute('y2', '4');
+    ln.setAttribute('stroke', 'rgba(0,0,0,.35)');
+    ln.setAttribute('style', 'stroke: color-mix(in srgb, var(--series-' + i + ') 65%, #000 35%)');
+    ln.setAttribute('stroke-width', '1.2');
+    p.appendChild(ln);
+    defs.appendChild(p);
+  }
   svg.appendChild(defs);
 
   const gridG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -313,7 +321,7 @@ function render() {
     grp.appendChild(hit);
 
     const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    bar.setAttribute('class', 'bar s1');
+    bar.setAttribute('class', 'bar s' + g.slot);
     const rr = Math.min(4, h / 2, barW / 2);
     bar.setAttribute('d', rr < 0.5
       ? 'M' + bx + ',' + (topY + h) + ' h' + barW + ' V' + topY + ' h' + (-barW) + ' Z'
@@ -386,6 +394,22 @@ function moveTip(e) {
 }
 function hideTip() { tip.hidden = true; }
 
+function renderLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  for (const g of GROUPS) {
+    const it = document.createElement('span');
+    it.className = 'legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'sw';
+    sw.style.setProperty('--c', 'var(--series-' + g.slot + ')');
+    const nm = document.createElement('span');
+    nm.textContent = g.name;
+    it.appendChild(sw); it.appendChild(nm);
+    el.appendChild(it);
+  }
+}
+
 document.querySelectorAll('[data-metric]').forEach(b => {
   b.addEventListener('click', () => {
     state.metric = b.dataset.metric;
@@ -436,6 +460,7 @@ try {
   if (x === '1') applyTex(true);
 } catch (e) {}
 
+renderLegend();
 refresh();
 </script>
 </body>
