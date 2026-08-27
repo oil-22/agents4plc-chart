@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Code 框架 · GY easy 评测</title>
+<title>Claude Code 框架评测</title>
 <style>
 :root { color-scheme: light; }
 html[data-theme="dark"] { color-scheme: dark; }
@@ -59,7 +59,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 main.card {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 28px auto;
   padding: 28px 32px 18px;
   background: var(--surface-1);
@@ -68,7 +68,7 @@ main.card {
 }
 header.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 h1 { font-size: 19px; font-weight: 650; margin: 0 0 6px; }
-p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.6; }
+p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; }
 .head-ctrls { display: flex; gap: 8px; flex: none; }
 .icon-btn {
   font: inherit; font-size: 12px; color: var(--ink-2);
@@ -78,13 +78,28 @@ p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.6; }
 .icon-btn:hover { background: var(--grid); }
 .icon-btn[aria-pressed="true"] { color: var(--ink-1); border-color: var(--ink-2); }
 
-.ctx { font-size: 13px; color: var(--ink-2); margin: 16px 0 10px; font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 6px 4px; }
+.filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 18px 0 4px;
+}
+.f-group { display: flex; align-items: center; gap: 6px; }
+.f-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+.tab {
+  font: inherit; font-size: 12.5px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 14px; cursor: pointer; white-space: nowrap;
+}
+.tab:hover { background: var(--grid); }
+.tab.active { color: var(--ink-1); border-color: var(--ink-2); font-weight: 600; }
+#btnTable { margin-left: auto; }
+
+.ctx { font-size: 13px; color: var(--ink-2); margin: 14px 0 10px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 6px 4px; }
 .legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
 .legend-item .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--c); }
 
 .chart-box { position: relative; }
-.chart-box svg { display: block; width: 100%; height: 460px; }
+.chart-box svg { display: block; width: 100%; height: 560px; }
 .bar { transition: filter .12s ease; }
 .bar-group:hover .bar, .bar-group:focus .bar, .bar-group:focus-visible .bar { filter: brightness(1.14); }
 .bar-group { outline: none; }
@@ -95,7 +110,7 @@ p.sub { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.6; }
 html.tex { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
 @media print {
   html { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
-  .head-ctrls, .foot { display: none; }
+  .filters, .head-ctrls, .foot { display: none; }
   body { background: #fff; }
   main.card { border: none; margin: 0; }
 }
@@ -119,40 +134,50 @@ html.tex { --fill-1: url(#tex-1); --fill-3: url(#tex-3); }
 .tip-name { color: var(--ink-2); }
 .tip-extra { margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
 
-.table-wrap { margin-top: 20px; }
+.table-wrap { margin-top: 18px; }
 h2.table-caption { font-size: 13.5px; font-weight: 650; margin: 0 0 10px; }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
 th, td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
 th { font-weight: 600; color: var(--ink-2); }
 th:first-child, td:first-child { text-align: left; color: var(--ink-2); }
+tbody tr:hover td { background: var(--page); }
 td.hl { font-weight: 650; }
 
-footer.foot { margin-top: 20px; font-size: 11.5px; color: var(--muted); line-height: 1.8; }
-footer.foot p { margin: 3px 0; }
+footer.foot { margin-top: 20px; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
+footer.foot p { margin: 2px 0; }
 </style>
 </head>
 <body class="viz-root">
 <main class="card">
   <header class="head">
     <div class="head-txt">
-      <h1>Claude Code 框架 · GY easy 评测</h1>
-      <p class="sub">框架：Claude Code CLI（agent 循环）· 模型：deepseek-v4-flash<br>任务池：GY（Y-Hard）easy · 评测方式：外部评测（iec2c 编译 + softplc 测试）</p>
+      <h1>Claude Code 框架评测</h1>
+      <p class="sub">Claude Code + deepseek-v4-flash · 编译通过率 · 测试通过率</p>
     </div>
     <div class="head-ctrls">
+      <a class="icon-btn" style="text-decoration:none;display:inline-flex;align-items:center" href="./index.html">← 完整对比</a>
       <button id="btnTex" class="icon-btn" aria-pressed="false" title="以 45° 纹理区分柱形（色弱识别 / 打印友好）">纹理</button>
       <button id="btnTheme" class="icon-btn" aria-pressed="false" title="切换明暗主题">深色</button>
     </div>
   </header>
 
+  <div class="filters">
+    <div class="f-group">
+      <span class="f-label">指标</span>
+      <button class="tab active">通过率</button>
+    </div>
+    <button id="btnTable" class="tab" aria-pressed="false">显示数据表</button>
+  </div>
+
   <div class="ctx" id="ctxLine">通过率（%）· 简单提示词 vs 详细脚手架</div>
   <div class="legend" id="legend"></div>
 
   <div class="chart-box" id="chartBox">
-    <svg id="chart" role="img" aria-label="Claude Code 框架 GY easy 通过率柱状图"></svg>
+    <svg id="chart" role="img" aria-label="Claude Code 框架通过率柱状图"></svg>
     <div id="tip" class="tip" hidden></div>
   </div>
 
-  <div class="table-wrap">
+  <div class="table-wrap" id="tableWrap" hidden>
     <h2 class="table-caption">运行统计（按会话去重）</h2>
     <table>
       <thead>
@@ -171,20 +196,17 @@ footer.foot p { margin: 3px 0; }
   </div>
 
   <footer class="foot">
-    <p>数据口径：任务数与通过率为最终外部评测统计（final_20260729_1020 / full_backup 的 reevaluation_v2 结果）；消耗类指标为全部运行记录按 session 去重后的平均值，含不同阶段批次（2026-07-28 至 07-29）。</p>
-    <p>覆盖范围：仅 GY easy 池。medium 池 150 个任务全部因 API 错误未完成（0 有效结果）；hard 池未运行；Siemens / OSCAT 未覆盖。</p>
+    <p>数据口径：任务数与通过率为最终外部评测统计（iec2c 编译 + softplc 测试）；消耗类指标为全部运行记录按会话去重后的平均值（2026-07-28 至 07-29 各批次）。</p>
+    <p>覆盖范围：Y 数据集（407 个任务）；medium 池全部因 API 错误未完成（0 有效结果），hard 池未运行；Siemens / OSCAT 未覆盖。</p>
     <p>同一任务在两种提示词模式下各跑一遍；两种模式的任务集合略有差异（204 / 203）。</p>
   </footer>
 </main>
 
 <script>
-/* 数据：Claude Code + deepseek-v4-flash 在 GY easy 上的外部评测结果 */
 const DATA = {
   groups: [
-    { name: '简单提示词', taskTotal: 204,
-      compiled: 192, testedPass: 180 },
-    { name: '详细脚手架', taskTotal: 203,
-      compiled: 186, testedPass: 180 },
+    { name: '简单提示词', taskTotal: 204, compiled: 192, testedPass: 180 },
+    { name: '详细脚手架', taskTotal: 203, compiled: 186, testedPass: 180 },
   ],
   series: [
     { key: 'testedPass', name: '测试通过率', slot: 1 },
@@ -196,12 +218,10 @@ const svg = document.getElementById('chart');
 const tip = document.getElementById('tip');
 const M = { l: 60, r: 20, t: 36, b: 52 };
 
-function pct(g, key) {
-  return g[key] / g.taskTotal * 100;
-}
+function pct(g, key) { return g[key] / g.taskTotal * 100; }
 
 function render() {
-  const W = svg.clientWidth || 1000, H = 460;
+  const W = svg.clientWidth || 1100, H = 560;
   const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
   const min = -10, max = 100, span = max - min;
   const ty = t => M.t + plotH * (1 - (t - min) / span);
@@ -224,7 +244,6 @@ function render() {
   }
   svg.appendChild(defs);
 
-  // 网格与轴线
   const gridG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   for (let t = 0; t <= max; t += 20) {
     const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -242,9 +261,7 @@ function render() {
   }
   svg.appendChild(gridG);
 
-  // Y 轴刻度
-  const ticks = [-10, 0, 20, 40, 60, 80, 100];
-  for (const t of ticks) {
+  for (const t of [-10, 0, 20, 40, 60, 80, 100]) {
     const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     tx.setAttribute('x', M.l - 10); tx.setAttribute('y', ty(t) + 4);
     tx.setAttribute('text-anchor', 'end');
@@ -254,7 +271,6 @@ function render() {
     svg.appendChild(tx);
   }
 
-  // 柱体
   const n = DATA.groups.length;
   const gap = Math.min(90, plotW * 0.08);
   const groupW = (plotW - gap * (n - 1)) / n;
@@ -303,7 +319,6 @@ function render() {
       grp.addEventListener('keydown', e => { if (e.key === 'Escape') { hideTip(); grp.blur(); } });
       svg.appendChild(grp);
 
-      // 柱顶直接标注（横向）
       const lb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       lb.setAttribute('x', bx + barW / 2); lb.setAttribute('y', topY - 4);
       lb.setAttribute('text-anchor', 'middle');
@@ -312,7 +327,6 @@ function render() {
       svg.appendChild(lb);
     });
 
-    // X 轴标签
     const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     tx.setAttribute('x', gx + groupW / 2); tx.setAttribute('y', H - 22);
     tx.setAttribute('text-anchor', 'middle');
@@ -322,7 +336,6 @@ function render() {
   });
 }
 
-/* 图例 */
 function renderLegend() {
   const el = document.getElementById('legend');
   el.innerHTML = '';
@@ -339,7 +352,6 @@ function renderLegend() {
   }
 }
 
-/* 工具提示 */
 function showTip(g, s, v, e, viaFocus) {
   tip.innerHTML = '';
   const head = document.createElement('div');
@@ -383,7 +395,15 @@ function moveTip(e) {
 }
 function hideTip() { tip.hidden = true; }
 
-/* 主题与纹理 */
+const btnTable = document.getElementById('btnTable');
+btnTable.addEventListener('click', () => {
+  const wrap = document.getElementById('tableWrap');
+  const show = wrap.hidden;
+  wrap.hidden = !show;
+  btnTable.textContent = show ? '隐藏数据表' : '显示数据表';
+  btnTable.setAttribute('aria-pressed', String(show));
+});
+
 const btnTheme = document.getElementById('btnTheme');
 function applyTheme(t) {
   if (t === 'dark') { document.documentElement.dataset.theme = 'dark'; btnTheme.textContent = '浅色'; btnTheme.setAttribute('aria-pressed', 'true'); }
